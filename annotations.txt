@@ -1,0 +1,235 @@
+Ansible do this:
+- Orchestrate
+- Manage confgurations
+- Deploy applications
+- Provision / deprovision
+- Deliver continuosly
+- Secure and comply
+
+Or these:
+- Firewall
+- Servers
+- Load balancers
+- Application
+- Storage
+- Containers
+- Virtualization platforms
+- Cloud
+- Storages
+- Network devices
+
+
+If you're launching a new app for example, ansible can handle the entire set-up:
+- Configuring, servers databases, network settings and security protocols (!).
+
+And once the app is running, ansible doesn't stop there, it helps you manage the application's health with automatix updates and scaling as your needs evolve.
+
+Core components of Ansible Red Hat Automation Platform:
+- Automation Controller: where you create, manage and schedule your automation.
+- Automation Hub: private repository app store for your automation content.
+- Event Driven Ansible: automation triggered by events in real-time.
+- Ansible Lightspeed: the power of AI to generate and refine Ansible Playbooks.
+
+A platform for the entire automation team.
+
+Architecture: 
+- Flexible container-native-architecture
+- Real-time analytics and reporting
+- Event-Driven Ansible
+- Containerized Installation
+- Available on all major cloud providers
+
+Content creation:
+- Ansible developer tools package
+- Integrated generative AI
+- Large ecosystem of certified automation
+
+Operations:
+- Unified UI provides cohesive platform experience
+- Enterprise features: WebUI, API, role-based access control (RBAC), auditing and workflows for managing at scale
+
+
+Ansible Basics:
+What makes up an Ansible playbook?
+Playbook = Plays, Modules and Plugins.
+
+What are they?
+- Top level specification for a group of tasks.
+- Will tell that play which hosts it will execute on and control behavior such as fact gathering or privilege level.
+
+Building blocks for playbooks:
+- Multiple plays can exist within an Ansible playbook.
+
+Example (playbook.yml):
+
+---
+- name: Ensure the httpd package is installed
+  hosts: web
+  become: true
+
+  tasks:
+    - name: Ensure the httpd package is installed
+       ansible.builtin.package:
+         name: httpd
+         state: present
+
+    - name: Create the index.html file
+      ansible.builtin.template:
+        src: files/index.html
+        dest: /var/www/html/
+
+    - name: Start the httpd service if needed
+      ansible.builtin.service:
+        name: httpd
+        state: started
+
+
+other examle:
+setup-playbook.yml:
+
+---
+- name: Basic System Setup
+  hosts: web
+  become: true
+  tasks:
+    - name: Update all security-related packages
+      ansible.builtin.package:
+        name: '*'
+        state: latest
+        security: true
+
+    - name: Create a new user
+      ansible.builtin.user:
+        name: roger
+        state: present
+        create_home: true
+
+The top level entry, which in this case, is named 'Basic System Setup', defines the manage nodes to target, here the main focus is getting the Basci System Setup on a group of hosts labeled 'web'.
+The 'become' entry focuses on privilige escalation. For example, enabling sudo access to ensure you can install packages on the system which is necessary for system level changes.
+And within each play, we have tasks, the individual steps that Ansible will follow to complete a specific action. 
+Each task is paired with a module, with just like a pre-built function that performs the action.
+Modules are what make Ansible flexible and powerful, covering everything from package management to user creation.
+For example the ansible.builtin.package manages software packages, here we are ensuring that the security packages are installed by using the wildcard ('*') and setting security equal to true.
+If we wanted to update all the packages on the system, we just would have to remove the 'security: true' line and it would have that effect.
+The ansible.builtin.user is a module that creates a user to the target systems, in this case, it creates the roger user on the systems that belong to the web server group.
+
+The ansible modules are parametrized components with internal logic, respresenting a single step to be done.
+They are usually created in Python or Powershell for Windows setups, but can be developed in any language.
+
+plugins are another piece of the ansible puzzle, they add functionality by adding features that extend what modules and plays can do.
+While modules can handle specific tasks, plugins allow us to customize Ansible's behaviour in a variety of ways.
+They handle things like privilege escalation (become), formatting outputs or managing connections.
+In our example the 'became' plugin enables Ansible to run tasks with elevated privileges, like using sudo, which is essential for tasks like installing software or starting services.
+The nice thing about plugins aside from the many builtin plugins you can use, is that you can also create custom plugins to suit your unique needs, making it highly addaptable.
+
+Ansible inventory:
+An Ansible inventory is a list of systems in your infrastructure that automation is executed against.
+Example:
+(hosts.ini)
+
+[web]
+webserver1.example.com
+webserver2.example.com
+
+[db]
+dbserver1.example.com
+
+[switches]
+leaf01.internal.com
+leaf02.internal.com
+
+An inventory is a list of hosts or a list of groups of hosts that Ansible will manage.
+Inventories can be as straightforward or as complex as you need, grouping hosts, basing on their roles, locations, or any other criteria.
+This approach allows us to define groups once and re-use them in multiple playbooks.
+Making it easy to run specific tasks on selected groups of servers or devices without specifying which servers we want each time.
+
+Ansible also supports dynamic inventories:
+Dynamic inventories automatically pull host information from external sources like CLoud providers, such as AWS or Azure, and virtualization platforms, like Openshift virtualization.
+This means as your infrastructure scales or changes, Ansible can dynamically adjust the list of managed hosts, which means no need to manually update your inventory file.
+This flexibility is especially powerful in environments where systems are frequently added or removed.
+ 
+
+Ansible variables:
+You can define variables in your playbooks, inventory, or variable files.
+
+Example of defining variables on playbooks:
+
+---
+- name: Basic System Setup
+  hosts: web
+  become: true
+  vars:
+    user_name: 'roger'
+    package_state: 'latest'
+    security_only: true
+  tasks:
+    - name: Update all security-related packages
+      ansible.builtin.package:
+        name: '*'
+        state: "{{ pachage_state }}"
+        security: "{{ security_only }}"
+
+    - name: Create a new user
+      ansible.builtin.user:
+        name: "{{ username }}"
+        state: present
+        create_home: true
+
+
+Production server might need specific users created or different package settings.
+Development servers might only need basic updates and users.
+With variables we can adjust the settings for each case without rewrtigin the playbook.
+
+Ansible Facts:
+Just like variables, but coming from the host itself.
+Ansible facts are built-in variables that that provide detailed information about the systems you're managing.
+This facts include information like IP addresses, system architecture, operating system versions, network configurations, you name it. 
+
+Example of Ansible Facts Playbook:
+
+---
+- name: Ansible Facts playbook
+  hosts: localhost
+  gather_facts: true
+
+  tasks:
+    - name: Define custom fact
+      ansible.builtin.set_fact:
+        server_role: "frontend"
+
+    - name: Use custom and built-in fact
+      ansible.builtin.debug:
+        msg: 'The {{ ansible_hostname }} is assigned the role: {{ server_role }}'
+
+As in this example, you can go in and create a simple playbook that captures those different hosts and the  displays those facts for you using a built-in ansible module like the debug module.
+We then could specify the variable ansible_facts, which is a special variable that will you us all the different facts about the systems or devices we're automating against.
+
+
+
+Using Ansible Automation Platform you can manipulate variables and its values within Job Templates, in which case, for example, you would use the following one (example):
+
+---
+- name: Basic System Setup
+  hosts: web
+  become: true
+  tasks:
+    - name: Update all security-related packages
+      ansible.builtin.package:
+        name: '*'
+        state: "{{ pachage_state }}"
+        security: "{{ security_only }}"
+
+    - name: Create a new user
+      ansible.builtin.user:
+        name: "{{ username }}"
+        state: present
+        create_home: true
+
+
+We can set the variables using the same syntax than in the playbook, but without declaring them under the 'vars:' line, just declaring the variables as if the 'vars:' line already exists, and we would do it
+seraching our project, in the job template of the project, clicking on 'edit' and declaring those varibles and its values on the 'Extra variables' part of the Job template configuration.
+Declaring the variables and its values within the job template itself brings more flexibility than declaring them within the playbook.
+
+
+
+
