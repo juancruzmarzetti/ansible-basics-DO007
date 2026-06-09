@@ -232,4 +232,423 @@ Declaring the variables and its values within the job template itself brings mor
 
 
 
+Ansible Constructs:
+- Condicionals
+- Handlers
+- Loops
+
+Theze tools are essential for tailoring your playbooks for specific environments and use cases.
+
+Conditionals: allow tasks to run only if certain conditions are met.
+Enable dynamic automation by checking the values of variables & making decisions at runtime.
+Example:
+---
+- name: variable playbook test
+  hosts: localhost
+
+  vars:
+    my_mood: happy
+
+  tasks:
+    - name: task, base on my_modd var
+      ansible.builtin.debug:
+        msg: "Yay! I am {{ my_modd }}!"
+      when: my_mood == "happy"
+
+    - name: task, based on my_mood var
+      ansible.builtin.debug:
+        msg: "Ask at your own risk. I'm {{ my_mood }}!"
+      when: my_mood == "grumpy"
+
+Ansible conditionals with facts:
+
+---
+- name: variable playbook test
+  hosts: localhost
+
+  tasks:
+  - name: Install httpd
+    ansible.builtin.package:
+      name: httpd
+      state: latest
+    when: ansible_distribution == 'RedHat'
+
+  - name: Install apache
+    ansible.builtin.package:
+      name: apache2
+      state: latest
+    when: ansible_distribution == 'Debian' or
+          ansible_distribution == 'Ubuntu'
+
+
+You also can use also use the results of a previous task to decide wether to execute a busequent task:
+
+---
+- name: variable playbook test
+  hosts: localhost
+
+  tasks:
+  - name: Ensure httpd pachages are present
+    ansible.builtin.package:
+      name: httpd
+      state: latest
+    register: httpd_results
+
+  - name: Restart httpd
+    ansible.builtin.service:
+      name: httpd
+      state: restarted
+    when: httpd_results.changed
+
+
+Whe do it by using the 'register' directive to store the result of the first task, and then if that result had a change, the 'when' condition found within the second task would become true.
+
+
+Ansible Handlers:
+Handlers are special tasks that are triggered by other tasks by using the 'notify' directive.
+They are typically used for actions like restarting services or reloading configurations, and they only run when something has changed.
+
+Example:
+---
+- name: variable playbook test
+  hosts: localhost
+
+  tasks:
+  - name: Ensure httpd package is present
+    ansible.builtin.package:
+      name: httpd
+      state: latest
+  notify: restart_httpd
+
+  handlers:
+  - name: restart_httpd
+    ansible.builtin.service:
+      name: httpd
+      state: restarted
+
+
+Another key about handlers is they always run at the end of your playbook.
+
+
+Ansible variables and Loops:
+---
+- name: Ensure users
+  hosts: node1
+  become: true
+
+  tasks:
+    - name: Ensure user is present
+      ansible.builtin.user:
+        name: dev_user
+        state: present
+
+    - name: Ensure user is present
+      ansible.builtin.user:
+        name: qa_user
+        state: present
+
+    - name: Ensure user is present
+      ansible.builtin.user:
+        name: prod_user
+        state: present
+
+Loops allow you to iterate over the list of items, making your playbooks more concise and scale.
+Loop example:
+
+---
+- name: Ensure users
+  hosts: node1
+  become: true
+
+  tasks:
+    - name: Ensure user is present
+      ansible.builtin.user:
+        name: "{{ item }}"
+        state: present
+     loop:
+      - dev_user
+      - qa_user
+      - prod_user
+
+
+There's a protective variable called inventory_hostname which refers to the name of the current host that Ansible is working on on your playbook.
+
+We can use it for example in a task, when we set the hosts value of the playbook as 'all', so we want to do some tasks to all the systems, but, for example, for a specific one or a specific group we want to do a different additional task:
+
+---
+- name: Basic System Setup
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Task 1
+    ...
+
+    - name: Task 2
+    ...
+
+    - name: instal Apache on web servers
+      ansible.builtin.package:
+        name: "{{ package_name }}"
+        state: present
+      when: inventory_hostname in groups['web'] 
+
+
+
+Ansible Templates:
+Templates are files that dynamically generate content by using variables, conditionals, loops and filters.
+How do they work?
+- First by reading in the source template file (.j2 (Jinja2))
+- Filling in the dynamic values based on the variables or facts.
+- Deploy the processed file with the variable values in place.
+
+For example, configuring a web server like apache may require dynamic values for the ports it listens on or the document route for the hosted files.
+This is where ansible template module (ansible.builtin.template) comes into play. It processes the template file and deploys the customized configuration to the managed nodes or your devices.
+
+Example:
+
+---
+- name: Ensure apache is installed and started
+  hosts: web
+  become: true
+  vars:
+    http_port: 80
+    http_docroot: /var/www/misyte.com
+  
+  tasks:
+    - name: Verify correct config file is present
+      ansible.builtin.template:
+        src: templates/httpd.conf.j2
+        dest: /etc/httpd/conf/httpd.conf
+
+These two variables in this example playbook are going to allow us to actually modify what's actually being configured in that file dynamically for our web server hosts.
+
+Example of a .j2 file:
+
+## Excerpt from httpd.conf.j2
+
+# Chnage this to listen on specific IP addresses as shown below to prevent Apache from glomming onto all bound IP addresses.
+#
+# Listen 80  ## original line
+Listen {{ http_port }}
+
+# DocumentRoot: The directory out of which you will serve your documents.
+# DocumentRoor "/var/www/html"
+DocumentRoot {{ http_docroot }}
+
+
+So in this template we're doing that dynamic configuration.
+
+
+Ansible Roles:
+- A method to modularize the different components of your automation.
+- Think of them as re-packaged instructions that group tasks, variables, files, templates into reusable components.
+
+Key Components:
+- Tasks
+- Variables
+- Files
+- Templates
+- Handlers
+
+Here's how they break down:
+- Tasks: the core of your automation, defined stpe-by-step in tasks/main.yml.
+- Variables: configurations you can adjust, stored in vars/ or defaults/.
+- Files: static resources like scripts or configurations you need to deploy, stored in the files/ directory.
+- Templates: dynamic files that can be customized with variables, located in the templates/ directory.
+- Handlers: actions triggered by task changes, such as restarting a service, saved in handlers/main.yml.
+
+This structured approach makes it easier to organize your playbooks and share automation across your team or projects.
+
+Ansible roles provide:
+- Reusability: write once, reuse multiple times.
+- Maintainability: clear structure for easy updates.
+- Collaboration: share with teams for consistency.
+- Scalability: modular design for growing projects.
+
+Example:
+
+my_role/
+|
+|--tasks/
+|    |
+|    main.yml -----> Your automation tasks go here.
+|
+|--handlers/
+|    |
+|    main.yml -----> Define actions triggered by task changes here.
+|
+|--templates/
+|    |
+|    *.j2 ---------> Dynamic files using Jinja2 for templating.
+|
+|--files/
+|    |
+|   static_files --> Static sources like configs or scripts.
+|
+|--vars/
+|    |
+|   main.yml ------> High-priority variables for the role.
+|
+|--defaults/
+|    |
+|   main.yml ------> Low-priority default variables.
+|
+|--meta/
+|    |
+|   main.yml ------> Metadata about the role, like dependencies.
+|
+|--README.md ------> Overview of the role and usage instructions.
+
+
+Using Ansible Roles is super straightforward. In your Ansible playbooks, you simply refer to your role that you want to use, for example, you just call 'roles:my_role'.
+And roles can obviously accept variables allowing you to customize their behaviour without modifying the role itself, and this flexibility is one of the reasons why roles are so popular in Ansible.
+
+For creating a new role we use ansible-galaxy, in our ansible directory we run 'ansible-galaxy init <our_new_role_name>' for example: 'ansible-galaxy init apache'.
+This command line will create a new directory called 'apache'(in our example case), and this directory will have the next directory's tree:
+
+apache/
+|
+|--tasks/
+|    |
+|    main.yml
+|
+|--handlers/
+|    |
+|    main.yml
+|
+|--templates/
+|
+|--files/   
+|
+|--vars/
+|    |
+|   main.yml
+|
+|--defaults/
+|    |
+|   main.yml
+|
+|--tests/
+|    |
+|   inventory
+|    |
+|   test.yml
+|
+|--meta/
+|    |
+|   main.yml
+|
+|--README.md
+
+
+
+
+Ansible Collections:
+- A way to organize, distribute, and reuse automation content.
+- Group components like roles, modules, plugins and playbooks.
+- Distributed via: Ansible Galaxy and Automation Hub.
+- Improves content management and collaboration within teams.
+
+
+|
+|--plugins
+|    |
+|   README.md
+|
+|--meta/
+|    |
+|   runtime.yml
+|
+|--galaxy.yml
+|
+|--docs/
+|
+|--README.md
+|
+|--roles/
+
+
+The reason you would liem to use Ansible Collections is because you can group all your content together (makes it easier to reuse and share).
+Provides teams consistency and giving everyone the same content to work off of.
+
+Ansible Galaxy is a community platform to discover, share, and download automation context like roles and collections.
+It enables users to reuse existing content instead of building everything from scratch, fostering collaboration and efficiency.
+Example:
+
+# Install collection from Ansible Galaxy
+ansible-galaxy collection install community.general
+
+# List installed collections
+ansible-galaxy collection list
+
+It's perfect for experimenting, learning and prototyping your automation projects.
+
+Automation Hub (Trusted automation content)
+- Hosted source of trusted Red Hat, Validated and Certfied Partner Content Collections.
+- Integrated documentation and examples.
+- Configurable as primary content collection source for your automation environment.
+- Access to hosted automation gub and content included in subscription.
+
+The distinction between Ansible Galaxy and Automation Hub is basically Galaxy is community-driven and offering those open-source collections contributed by different individuals and organizations, 
+and Automation Hub is a repository with that trusted enterprise grade collections that weŕe definitely looking for when we're trying to do production type environments, and this dual approach gives that flexibility.
+
+
+How to create an Ansible Collection?
+In our case we want to create a collection of our apache web servers ansible configuration, so, we run the following command line below:
+
+ansible-galaxy collection init webops.apache --init-path ./collections/ansible_collections  
+
+(the 'webops' part is the namespace, it's what differentiates the apache collection of different users, in this case, it's the 'apache' collection of 'webops', also that namespace should be unique).
+(then the '--init-path ./collections/ansible_collections' part of the command line creates the specified collection inside the directory 'ansible_collections' and also creates this directory inside a another new directory named 'collections')
+(inside the 'ansible_collections' directory, this command line creates the basic structure of a collection, firstly the directory 'webops' and inside that creates the directory 'apache', which will have the tree pre-format which we specified 
+previously).
+
+
+from our role-playbook.yml, now we can refer to the apache role by two different ways:
+
+---
+- name: Deploy Apache using a Role
+  hosts: web
+  become: true
+  roles:
+    - webops.apache.apache
+
+or
+
+---
+- name: Deploy Apache using a Role
+  hosts: web
+  become: true
+  collections:
+    - webops.apache
+  roles:
+    - apache
+
+
+When we work with collections and we don't have downloaded it yet, and we want to avoid all mistakes when executing the ansible configuration, we should create a requirements.yml gile in which we would
+specify the names of the collections that we gonna use in our ansible configuration.
+
+Example:
+
+collections:
+- name: snaagor.app_common
+- name: community.general 
+
+
+
+Role-based Acces Control (RBAC): (Ansible Automation Platform functionality)
+Securely govern access to your automation:
+- Logically group controller objects and grant users and teams read, execute, edit permissions.
+- Use predefined roles to gran access.
+- Integrates with your existing entreprise authentication systems.
+
+This means you can define exactly what users or teams can do down to specific job templates, inventories, or credentials.
+For example, you might allow one user to execute a job, another user to edit, and a team to manage only specific job templates.
+
+User Management:
+- An organization is a logical collection of users, teams, projects, inventories and more. All entities belong to an organization.
+- Teams provide a means to implement role-based access control schemes and delegate responsibilities across organizations.
+- A user is an account to access Ansible Automation Controller and its services given the permissions granted to it.
+
 

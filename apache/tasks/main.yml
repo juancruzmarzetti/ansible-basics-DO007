@@ -1,4 +1,5 @@
 ---
+# tasks file for apache
 - name: Basic System Setup
   hosts: all
   become: true
@@ -55,8 +56,7 @@
         src: templates/motd.j2
         dest: /etc/motd
 
-  handlers:
-    - name: Reload Firewall
-      ansible.builtin.service:
-        name: firewalld
-        state: reloaded
+    - name: Deploy custom index.html
+      ansible.builtin.template:
+        src: index.html.j2
+        dest: /var/www/html/index.html
