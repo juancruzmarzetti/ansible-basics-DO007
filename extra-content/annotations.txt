@@ -1,0 +1,169 @@
+Jeff Gerling - Ansible 101 - Episode 6 - Ansible Vault and Roles (https://www.youtube.com/watch?v=JFweg2dUvqM&list=PL2_OBreMn7FqZkvMYt6ATmgC0KAGGJNAN&index=6)
+
+Ansible Vault & Roles:
+
+Ansible Vault works just like a real world vault where you take something sensitive like a password or an API key that you would have in a variable and you've put it in a vault and Ansible encrypts the vault and gives you a key
+which is your password and then with that key you can unlock the vault anytime you run an ansible playbook.
+There are a few technicalities to that...
+
+You would for example have an vars/api_key.yml file where you have a var with sensitive content like an API key or other variable which refers to an important sensitive value,
+you can encrypt that variable into an Ansible Vault by running: 'ansible-vault encrypt vars/api_key.yml'
+
+api_key.yml example:
+
+---
+myapp_api_key: "asdasdfsafagmaoidjasakdnas1251221"
+
+
+after runnign the 'ansible-vault encrypt' command line, the cmd is gonna ask you for a password, and this password it's gonna be the key to that file basically, so after running that and setting the password for the ansible vault,
+if you go to the api_key.yml file you are going to see that the file is encrypted.
+
+Now, if i run the playbook normally and in the playbook I were already using the var within api_key.yml, it won't work, now we have to run in with a different command...
+we should run it using de command line 'ansible-playbook main.yml --ask-vault-pass' which is gonna ask we about that ansible vault password.
+
+But if your want to run it automatically, for example in a pipeline or using other methodology which automates the execution of the command line and you don't want to hardcode the ansible vault password,
+you should also supply a password file, in which case you can run the playbook using the following command line: 'ansible-playbook main.yml --vault-password-file <filePathOfThePassword'sFile>'.
+This password file could be a .txt file like 'api-key-pass.txt' in which case you would run 'ansible-playbook main.yml --vault-password-file ~/ansible/api-key-pass.txt'.
+You can also decrypt var files for example using the following command line: 'ansible-vault decrypt vars/api_key.yml' (not recommended).
+You can also edit the var file without decrypting the file by using: 'ansible-vault edit vars/api_key.yml'.
+You can change the ansible vault password of the file using: 'ansible-vault rekey vars/api_key.yml'
+
+
+Ansible var files:
+
+You can have variables in one unqiue .yml file and refer to it on the main.yml playbook by using 'vars_files', and you can refer more than one (for example, you can have one var file for non sensitive variables (not encrypted)
+and other one encrtypted var file (with ansible vault) within sensitive variables) as in the following example:
+
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - vars/api_key.yml
+
+  tasks:
+    ...
+
+
+More task features --> conditionals and tags:
+For example you can use the 'changed_when' or 'failed_when', especially when you are using a shell module or a command module, you might want to have custom conditions for when its changed or nor or when its failed or not,
+based on the output of a response (you can capture a response on a temp variable using 'register' on that task).
+
+Also if you run task that have errors but you want to run it anyways, you can set 'ignore_errors: true' on that task.
+
+
+Includes and imports:
+
+We can, for example, have a main.yml playbook, in which we import tasks for other files on different directories, and you can slo pass variables to that imported tasks from the main.yml playbook.
+Example:
+
+---
+- name: Install Apache.
+  hosts: all
+  become: true
+
+  handlers:
+    - import_tasks: handlers/apache.yml
+
+  pre_tasks:
+    - name: Load variable files.
+      include_vars: "{{ item }}"
+      with_first_found:
+        - "vars/apache_{{ ansible_os_family }}.yml"
+        - "vars/apache_default.yml"
+
+  tasks:
+    - import_tasks: tasks/apache.yml
+      # Example of passing variables to an imported task
+      vars:
+        apache_package: apache3
+
+
+Caution abour dynamic tasks:
+
+For example:
+(the previous main.yml)
+---
+...
+  tasks:
+    - import_tasks: tasks/apache.yml
+      
+    - name: Check for existing lof files in dynamic log_file_paths variable.
+      find:
+        paths: "{{ item }}"
+        patterns: '*.log'
+      register: found_log_file_paths
+      with_items: "{{ log_file_paths }}"
+
+The 'Check for existing...' task have a variable 'log_file_paths' that is dynamically defined, instead of doing that we would rather use the 'include_tasks' for including that task there, for example:
+
+---
+...
+  tasks:
+    - import_tasks: tasks/apache.yml
+    - include_tasks: tasks/log.yml
+
+Include have dynamically defined information going into tasks or dynamically changing tasks.
+It's hard to know exactly when to use an include instead of using an import, but for example,
+if in a playbook you use all imports, and you don't know why it's not working, you should examine for which task you whould rather use include instead of import (several times just changing that keyword you'll have a better result).
+
+Another detail is that playbooks can also be included, just like tasks:
+
+---
+...
+  tasks:
+    - import_tasks: tasks/apache.yml
+    - include_tasks: tasks/log.yml
+
+- import_playbook: app.yml
+
+
+
+
+
+----------------------------------
+
+
+Jeff Gerling - Ansible 101 - Episode 7 - Molecule Testing and Linting and Ansible Galaxy (https://www.youtube.com/watch?v=FaXVZ60o8L8&list=PL2_OBreMn7FqZkvMYt6ATmgC0KAGGJNAN&index=7)
+      
+
+When we want to use roles for collections of ansible galaxy we can specify that roles of that collections on a 'requirements.yml' file, and then when we run 'ansible-galaxy install -r requirements.yml', that command line will install that
+roles on our project.
+
+Example of requirements.yml:
+
+---
+roles:
+  - name: elliotweiser.osx-command-line-tools
+  - name: geerlingguy.homebrew
+
+
+Unit integration and functional testing in Ansible itself:
+- The first level of testing is checking the .yml syntax.
+- The second level: Is this valid Ansible?
+- The third level: Does this Ansible playbook run in a fresh environment?
+- The fourth level: Does this Ansible playbook run idempotently and will run against production multiple times without breaking things?
+- The fifth level: have a parallel environment that's a replica of the production environment and rebuild that environment from scratch everytime you make a change that make sure everytihing works correctly.
+
+Testing steps:
+- yamllint
+- ansible-playbook --syntax-check: make sure that basic components of syntax work with ansible and ansible can compile the playbook (doesn't mean it's gonna run).
+- ansible-lint: tests for the yaml that's in your playbook to make sure it's compatible with best practices.
+- molecule test (integration): integration test that runs your playbook against a fresh environment.
+- ansible-playbook --check (against production environment): for structure to see the changes you would do.
+- Parallel infrastructure: deploy a infrasrtructure replica, run the playbook againts it, see what it happens and then destroy that parallel infrastructure. (rare)
+
+Best practices for testing the functionality on the playbook itself:
+Debug module: print things to the screen, it also has a setting for verbosity .
+Fail and assert modules: 
+
+To use yamllint we have to install with the following command line:
+
+'pip3 install yamllint'
+
+then you can run yamllint on a specific directory and it will analyze the yaml files with the following command line:
+
+'yamllint .'
+
+---- pause at min 32 ----
