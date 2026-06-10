@@ -652,3 +652,42 @@ User Management:
 - A user is an account to access Ansible Automation Controller and its services given the permissions granted to it.
 
 
+Ansible Workflows: Solve complex problems.
+- Overhauled in AAP 2.5
+- Workflows enable the creation of powerful holistic automation, chaining together multiple pieces of automation and events.
+- Simple logic inside these workflows can trigger automation depending on the success or failure of previous steps.
+- Add approvals to your workflows to enhance governance.
+- Integrate other systems, such as ITSM to fit with your existing controls and processes.
+
+Run jobs in parallel and even nest workflows. Enabling modular aund reusable automation.
+Think of workflows as a blueprint of your automation processes.
+
+The reason why you would like to use Ansible Worflows is because, as your automation projects grow, managing can be daunting. By using Ansible Workflows you reduce complexity.
+For example, instead of creating one masive playbook, you can break it into smaller focused job templates and connect them with the workflows.
+They also provide flexibility based on conditions. For example, say you have a workflow for configuring networks, deploying web servers, and another for setting databases. Together, these workflows
+can form a complete solution. But what if your first job template fails? With no network configuration your web server deployment is going to likely fail.
+Thus, take advantage of the workflow to run a different job template on a failure, say, a notification job template alerting the team that there was a problem.
+So how do you create an Ansible Workflow? With Ansible Automation Platform when you create a workflow template, you use what is called the workflow visualizer, 
+which is an interface within automation controller that is part of AAP (Ansible Automation Platform) to build out that workflow template.
+And then there you can use the UI to customize which templates go in your workflow and when they should be run.
+
+
+
+Event-driven Ansible: enables Ansible Ansible to run automation code without a manual intervention when it receives notifications of events in your environment.
+It's like having a super efficient assistant that's always ready to jump in and handle the problem for you.
+Event-Driven Ansible saves time and energy automating those repetitive tasks, freeing up your team to focus on what really matters.
+It also makes your operations more reliable, with EDA, every responde follows the same set of rules, tested, predictable and consistent.
+
+Event-Driven Ansible has three key parts:
+- Event sources: these are where your events come from, tools like Dynatrace, ServiceNow, Red Hat Insights.
+- Rules in Ansible Rulebooks: these are like instructions defining when and why something should happen.
+- End-to-end automated actions: this is the 'what', the automated task like running a job template in your environment.
+
+These pieces work together to create powerful automation workflows, and it integrates seamlessly with tools you already use.
+
+Event Streams: introduced in AAP 2.5.
+Whit Event Streams, everything flows through a single centralized port.
+You set it u once, and all your event sources, whether it's ServiceNow, Dynatrace, or something else, connect to the same stream.
+Multiple teams can now share the same Event Stream while having their own customized workflows.
+
+
