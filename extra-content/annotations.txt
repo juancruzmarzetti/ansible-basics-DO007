@@ -166,4 +166,56 @@ then you can run yamllint on a specific directory and it will analyze the yaml f
 
 'yamllint .'
 
----- pause at min 32 ----
+using yamllint, yamllint don't recognize 'yes', 'no', '0' or '1' as boolean values, only recognizes 'true' or 'false'. if you want to use more values for booleans, you can set that in a file called '.yamllint' which you would have exactly 
+within the same directory in which you will run yamllint.
+
+Example:
+---
+extends: default
+
+rules:
+  truthy:
+    allowed-values:
+      - 'true'
+      - 'false'
+      - 'yes'
+      - 'no'
+
+
+Then, in the following testing phase in which we would use the syntax check approach, we run it using the command line 'ansible-playbook playbook.yml --syntax-check'.
+when checking the 'include_tasks' part of the playbook, the syntax check wont check if that file exists, however, it will check the existence of the imported tasks on the 'import_tasks' part of the playbook.
+
+The following test phase is ansible-lint, which we can use running ir with the following command line: 'ansible-lint playbook.yml', ansible-lint would perform a analysys in depth of best ansible practices and would warn us
+about some things in our playbooks, for example, if we don't name a task or we use a specific functionality that we can achieve with a minor complex way, ansible-lint will recommend to change something.
+
+
+Next step: Molecule
+It's basically a way to use Ansible to set up a test environment, to run an Ansible playbook, to do tests on the Ansible environment and then tear it down (all using Ansible).
+You install molecule with the command line 'pip3 install molecule' (in the same way you install ansible-lint or yamllint).
+
+- Create a new role with molecule: molecule init role myrole
+- Then test it: molecule test
+- And test it but leave the container running for debugging: molecule converge
+(Set a 'breakpoint' using 'fail:' in the tasks for debugging).
+ 
+When you create a role running the molecule role creation command line, it creates the same structure than creating a role with ansible, but also creates a molecule directory with a default configuration for the molecule testing, in which
+directory are the following files that you can personalize:
+- molecule.yml: specifies dependencies (default value is galaxy), a driver (default value is docker), platforms (specification of docker image (default value is a centos image), and some docker default configuration),
+provisioner (default value is ansible) and verifier (default value is ansible).
+- converge.yml: is a simple playbook that runs the role that you just created.
+- verify.yml: here you specify your tests inside of that molecule enviroment.
+
+The use of the 'fail:' for debugging when using molecule its based in that, if you run molecule test, and in some part of your playbook you put a 'fail:', the playbook will be executed but it will stop in the 'fail:' line, because of the fail,
+so, there you can debug something by changing the 'fail:' from line to line, using it like a breakpoint.
+
+with the command line 'molecule login' you can enter the instance in which you are running the molecule environment, so there you can dive into the instance validating your ansible configuration.
+
+finally, we can exit the instance and destroy it with 'molecule destroy'.
+
+Actualized molecule:
+It don't creates a role, you can create a role using ansible-galaxy and then, within the role directory, run 'molecule init scenario' which creates the default molecule testing scenario.
+
+--------------------------------
+
+Jeff Gerling - Ansible 101 - Episode 8 - Playbook Testing with Molecule and GitHub Actions CI (https://www.youtube.com/watch?v=CYghlf-6Opc&list=PL2_OBreMn7FqZkvMYt6ATmgC0KAGGJNAN&index=8)
+
