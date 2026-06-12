@@ -1,0 +1,14 @@
+---
+# Purpose: bring the instance to the desired state by running the role under test.
+# Molecule calls this playbook with `molecule converge`.
+- name: Converge
+  hosts: all
+  gather_facts: true # Disable if your role does not rely on facts
+  tasks:
+    - name: Update apt cache (only on Debian)
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+
+- import_playbook: ../../main.yml

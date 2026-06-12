@@ -215,7 +215,36 @@ finally, we can exit the instance and destroy it with 'molecule destroy'.
 Actualized molecule:
 It don't creates a role, you can create a role using ansible-galaxy and then, within the role directory, run 'molecule init scenario' which creates the default molecule testing scenario.
 
+
+(Here are documentation about using molecule to test ansible into an Azure environment: 'https://jloudon.com/cloud/Ansible-on-Azure-Part-3/').
 --------------------------------
 
 Jeff Gerling - Ansible 101 - Episode 8 - Playbook Testing with Molecule and GitHub Actions CI (https://www.youtube.com/watch?v=CYghlf-6Opc&list=PL2_OBreMn7FqZkvMYt6ATmgC0KAGGJNAN&index=8)
+
+On the docker default configuration of the default molecule scenario, in the molecule.yml file there are a default docker image for the scenario, there we can use a Dockerfile setting the 'pre_build_image' to false, or we can change
+the docker image value with other image which we want to use to set te molecule ansible testing scenario... we can use images from "https://ansible.jeffgeerling.com/#container-images-testing".
+
+molecule also injects a default command in the virtual machine when initializing the molecule environment, that can have conflicts with some ansible configuration, to disable that commando, add 'command: ""' on the docker config on molecule.yml.
+
+Molecule verifiers:
+in verify.yml you can define tasks to test if the ansible configuration that you done is well done.
+(you can also specify this tasks as the final ttasks in the main playbook and it will have the same testing effect).
+
+you can run the tests by using the following command line: 'molecule verify'
+
+Also you can complement molecule testing with ansible-lint and yamllint by specifying in the molecule.yml, just under the definition of the driver:
+
+lint: |
+  set -e
+  yamllint.
+  ansible-lint
+
+so the if you run the command line 'molecule lint' it will execute both lint analizers.
+
+We can also automate molecule tests for each push to a github repository with github actions.
+(Example in episode-8 directory) (this automation example will work automatically with each push if the 'episode-8' directory was the principal directory of the github repository).
+
+This molecule explanation is from 2020, so its pretty different, if you are reading this and you see the example you are going to see that a bunch of things are different as are described here, but i did this to understand
+the core functionalities, which are pretty the same. For updated information about molecule see 'https://docs.ansible.com/projects/molecule/'.
+
 
